@@ -76,6 +76,7 @@ public class ChatServer {
 						openChats.add(newChat);
 						newChat.setID(openChats.indexOf(newChat));
 						newChat.addUsers(array);
+						newChat.sendMessage("" + Integer.toString(newChat.getID()) + separator + "CONSOLE" + separator + "This is a new chat, send a message!" );
 					}
 				}
 			} catch (IOException e) {
@@ -104,6 +105,10 @@ public class ChatServer {
 		
 		public void setID(int ID) {
 			this.ID = ID;
+		}
+
+		public int getID() {
+			return ID;
 		}
 		
 		public void addUsers(String[] array) {
