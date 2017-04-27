@@ -13,8 +13,8 @@ class ClientObserver extends PrintWriter implements Observer {
 		
 		@Override
 		public void update(Observable arg0, Object arg1) {
-			// TODO Auto-generated method stub
-			
+			this.println(arg1);
+			this.flush();
 		}
 		
 	}

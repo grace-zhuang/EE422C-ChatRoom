@@ -18,9 +18,10 @@ import java.util.*;
 
 
 public class ChatServer {
-	private List<ChatRoom> openChats;
-	private Map<String, ClientObserver> userObservers;
+	private static List<ChatRoom> openChats;
+	private static Map<String, ClientObserver> userObservers;
 	private static final String separator = Character.toString((char) 31);
+	private static final String nameSeparator = Character.toString((char) 29);
 
 	public ChatServer() {
 		openChats = new ArrayList<ChatRoom>();
@@ -32,6 +33,7 @@ public class ChatServer {
 		ServerSocket serverSock = new ServerSocket(4242); 
 		while (true) { 
 			Socket clientSocket = serverSock.accept();
+			System.out.println("Received connection " + clientSocket);
 			ClientObserver writer = new ClientObserver(clientSocket.getOutputStream());
 			Thread t = new Thread(new ClientHandler(clientSocket, writer)); 
 			t.start(); 
@@ -47,11 +49,13 @@ public class ChatServer {
 			Socket sock = clientSocket;
 			try {
 				reader = new BufferedReader(new InputStreamReader(sock.getInputStream())); 
+				this.writer = writer;
 			} 
 			catch (IOException e) { 
 				e.printStackTrace();
 			}
 		}
+		
 		public void run() {
 			String message;
 			try {
@@ -65,8 +69,12 @@ public class ChatServer {
 					
 					// a user should send in its username when it is first created
 					else if(array[0].equals("NEWUSER")) {
+						System.out.println("hi");
 						String user = array[1];
 						userObservers.put(user, this.writer);
+						System.out.println(this.writer);
+						System.out.println("hello");
+
 					}
 					
 					// create a chat room when user requests to chat with others
@@ -77,6 +85,27 @@ public class ChatServer {
 						newChat.setID(openChats.indexOf(newChat));
 						newChat.addUsers(array);
 						newChat.sendMessage("" + Integer.toString(newChat.getID()) + separator + "CONSOLE" + separator + "This is a new chat, send a message!" );
+					}
+					
+					else if(array[0].equals("GETONLINE")) {
+						
+						System.out.println("ok");
+						Set<String> keys = 	userObservers.keySet();
+						String names = "";
+						
+						// create String with all online user names
+						for(String user: keys) {
+							names += user + nameSeparator;
+						}
+						
+						// return back GETONLINE string with user names separated by nameSeparator
+						names = ("GETONLINE" + separator + array[1] + separator + names);
+						
+						// use chat room observer pattern to send message
+						String[] tempArray = names.split(separator);
+						ChatRoom temp = new ChatRoom();
+						temp.addUsers(tempArray);
+						temp.sendMessage(names);
 					}
 				}
 			} catch (IOException e) {
@@ -113,7 +142,8 @@ public class ChatServer {
 		
 		public void addUsers(String[] array) {
 			addObserver(userObservers.get(array[1]));
-			String[] otherUsers = array[2].split("|");
+			String[] otherUsers = array[2].split(nameSeparator);
+			System.out.println(Arrays.toString(otherUsers));
 			for(int i = 0; i < otherUsers.length; i++) {
 				addObserver(userObservers.get(otherUsers[i]));
 			}
@@ -124,6 +154,8 @@ public class ChatServer {
 			notifyObservers(message);
 		}
 	}
+	
+
 
 	public static void main(String[] args) {
 		try {
