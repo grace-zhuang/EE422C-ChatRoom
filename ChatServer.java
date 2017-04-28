@@ -64,16 +64,27 @@ public class ChatServer {
 					
 					// input is a message with a chat room ID attached to it
 					if(isNumeric(array[0])) {
-						openChats.get(0).sendMessage(message);
+						openChats.get(Integer.parseInt(array[0])).sendMessage(message);
 					}
 					
-					// a user should send in its username when it is first created
+					// a user should send in its user name when it is first created
 					else if(array[0].equals("NEWUSER")) {
-						System.out.println("hi");
 						String user = array[1];
-						userObservers.put(user, this.writer);
-						System.out.println(this.writer);
-						System.out.println("hello");
+						
+						if(userObservers.containsKey(user)) {
+							userObservers.put("ERRORNAME", this.writer);
+							String error = "USEREXISTS" + separator + "ERRORNAME" + separator +  "ERRORNAME";
+							String[] tempArray = error.split(separator);
+							ChatRoom temp = new ChatRoom();
+							temp.addUsers(tempArray);
+							temp.sendMessage(error);
+							userObservers.remove("ERRORNAME");
+						}
+						else {
+							userObservers.put(user, this.writer);
+							System.out.println(this.writer);
+						}
+						
 
 					}
 					
@@ -84,12 +95,19 @@ public class ChatServer {
 						openChats.add(newChat);
 						newChat.setID(openChats.indexOf(newChat));
 						newChat.addUsers(array);
-						newChat.sendMessage("" + Integer.toString(newChat.getID()) + separator + "CONSOLE" + separator + "This is a new chat, send a message!" );
+						
+						String userString = "";
+						String[] users = array[2].split(nameSeparator);
+						for(int i = 0; i < users.length; i++) {
+							userString += users[i] + ", ";
+						}
+						userString += array[1];
+						
+						newChat.sendMessage("" + Integer.toString(newChat.getID()) + separator + "CONSOLE" + separator + "This is a new chat between: " + userString);
 					}
 					
 					else if(array[0].equals("GETONLINE")) {
 						
-						System.out.println("ok");
 						Set<String> keys = 	userObservers.keySet();
 						String names = "";
 						
@@ -143,7 +161,6 @@ public class ChatServer {
 		public void addUsers(String[] array) {
 			addObserver(userObservers.get(array[1]));
 			String[] otherUsers = array[2].split(nameSeparator);
-			System.out.println(Arrays.toString(otherUsers));
 			for(int i = 0; i < otherUsers.length; i++) {
 				addObserver(userObservers.get(otherUsers[i]));
 			}

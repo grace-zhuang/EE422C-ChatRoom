@@ -12,24 +12,42 @@
 
 package assignment7;
 
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.ListIterator;
 
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.geometry.Insets;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
+import javafx.scene.control.ScrollBar;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.ScrollPane.ScrollBarPolicy;
+import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.layout.Background;
+import javafx.scene.layout.BackgroundFill;
+import javafx.scene.layout.ColumnConstraints;
+import javafx.scene.layout.CornerRadii;
+import javafx.scene.layout.GridPane;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.RowConstraints;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
 
@@ -41,15 +59,17 @@ public class ChatClient extends Application {
 	private static final String separator = Character.toString((char) 31);
 	private static final String nameSeparator = Character.toString((char) 29);
 	private Stage home = null;
+	private HashMap<Integer, ChatWindow> chatWindows = new HashMap<Integer, ChatWindow>();
+	private VBox open;
 
 
 	@Override
 	public void start(Stage primaryStage) throws Exception {
 		setUpNetworking();
-		home = new Stage();
+		home = primaryStage;
 
 		primaryStage.setTitle("Chat Room");
-		VBox open = new VBox();
+		open = new VBox();
 
 		Label title = new Label("Welcome to Chat Room!");
 		title.setFont(Font.font("Bradley Hand ITC", 30));
@@ -68,12 +88,9 @@ public class ChatClient extends Application {
 
 					writer.println("NEWUSER" + separator + s);
 					writer.flush();
-
-
+					
 					writer.println("GETONLINE" + separator + name);
 					writer.flush();
-
-					primaryStage.close();
 				}	
 			}
 
@@ -106,8 +123,30 @@ public class ChatClient extends Application {
 		Thread readerThread = new Thread(new IncomingReader()); 
 		readerThread.start();
 	}
+	
+	public void userExists(String[] message) { 
+		
+		Node currentNode = null;
+		
+		for(ListIterator<Node> iterator = open.getChildren().listIterator(); iterator.hasNext(); currentNode = iterator.next()) {
+			if (currentNode instanceof Label && !((Label)currentNode).getText().equals("Welcome to Chat Room!")) {
+				iterator.remove();
+			}
+		}
+	
+		String error = "Username already exists. Enter another username.";
+		Label notif = new Label();
+		notif.setText(error);
+		open.getChildren().add(notif);
+		
+		
+	}
 
 	public void loggedIn(String[] available) {
+	
+	
+		home.close();
+		home = new Stage();
 		VBox chat = new VBox();
 		Label welcome = new Label("Welcome, " + name + "!");
 
@@ -119,31 +158,69 @@ public class ChatClient extends Application {
 			chat.getChildren().add(online[i]);
 		}
 
+		Button done = new Button("Start Chat");
+		done.setOnAction(new EventHandler<ActionEvent>() {
 
-		chat.getChildren().addAll(welcome, people);
+			@Override
+			public void handle(ActionEvent arg0) {
+
+				String names = "";
+				for(int i = 0; i < online.length; i++) {
+					if (online[i].isSelected())
+						names += online[i].getText() + nameSeparator;
+				}
+
+				String message = "NEWCHAT" + separator + name + separator + names;
+				writer.println(message);
+				writer.flush();
+
+			}});
+
+
+		chat.getChildren().addAll(welcome, people, done);
 		Scene realScene = new Scene(chat, 300, 300);
 		home.setScene(realScene);
 		home.show();
 	}
 
 
-	public void startChat() {
-		// writer.println("NEWCHAT" + separator + name + );
-		// receive back ID
+	/**
+	 * Creates new ChatWindow
+	 * @param message
+	 */
+	public void startChat(String[] message) {
+		int ID = Integer.parseInt(message[0]);
+		ChatWindow newChat = new ChatWindow(ID);
+		chatWindows.put(ID, newChat);
+		newChat.setTitle(message);
+		newChat.updateChat(message);
 	}
 
-	class ChatWindow {
+	class ChatWindow extends Application {
 
 		private int ID;
+		private Stage chat;
+		private ScrollPane sPane;
+		private GridPane convo;
+		private int messageNo = 0;
 
 		public ChatWindow(int num) {
+			
+			
+			
 			ID = num;
-
-			Stage chat = new Stage();
+			this.chat = new Stage();
 			chat.setTitle("Chat Window");
 
-			ScrollPane convo = new ScrollPane();
-			convo.setVbarPolicy(ScrollBarPolicy.ALWAYS);
+			convo = new GridPane();
+			
+			sPane = new ScrollPane();
+			sPane.setVbarPolicy(ScrollBarPolicy.ALWAYS);
+			sPane.setHbarPolicy(ScrollBarPolicy.NEVER);
+			
+			
+			
+			
 			TextField text = new TextField();
 			text.setPromptText("Enter message");
 			Button send = new Button("Send");
@@ -151,32 +228,91 @@ public class ChatClient extends Application {
 
 				@Override
 				public void handle(ActionEvent event) {
-					String s = send.getText();
-					if (s != null) { //FIX THIS!!!!!!
+					String s = text.getText();
+					if (s != null) {
 						sendMessage(s);
+						text.clear();
+						text.setPromptText("Enter message");
 					}
 				}
 
 			});
+			
+			// send message on pressing 
+			text.setOnKeyPressed(new EventHandler<KeyEvent>() {
+			    @Override
+			    public void handle(KeyEvent keyEvent) {
+			        if (keyEvent.getCode() == KeyCode.ENTER)  {
+			        	String s = text.getText();
+						if (s != null) {
+							sendMessage(s);
+							text.clear();
+							text.setPromptText("Enter message");
+						}
+			        }
+			    }
+			});
+			
 			VBox box = new VBox();
-			box.getChildren().addAll(convo, text, send);
+			GridPane screen = new GridPane();
+			screen.getRowConstraints().add(new RowConstraints(270));
+			screen.getRowConstraints().add(new RowConstraints(30));
+			screen.getColumnConstraints().add(new ColumnConstraints(250));
+			screen.getColumnConstraints().add(new ColumnConstraints(50));
+			screen.add(sPane, 0, 0);
+			screen.add(text,0,1);
+			screen.add(send, 1, 1);
+			
+			
+			sPane.setContent(convo);
+			box.getChildren().addAll(screen);
 			Scene scene = new Scene(box, 300, 300);
+			sPane.setMinViewportWidth(scene.getWidth()-15);
 			chat.setScene(scene);
 			chat.show();
+		}
+		
+		public void setTitle(String[] message) {
+			String sentMessage = message[2];
+			sentMessage = sentMessage.substring(27, sentMessage.length());
+			System.out.println(sentMessage);
+			chat.setTitle(sentMessage);
+		}
+
+		@Override
+		public void start(Stage arg0) throws Exception {
+			//nothing
 		}
 
 		public int getID() {
 			return ID;
 		}
 
-		public void updateChat() {
-			// parse message, update chat
+		public void updateChat(String[] message) {
+			Label text = new Label();
+			text.setText(message[1] + ": " + message[2]);
+			text.setWrapText(true);
+			//text.setPrefHeight(12 * ((message[1].length() + message[2].length()) / 18 + 2));
+			//text.setMaxHeight(12 * ((message[1].length() + message[2].length()) / 18 + 2));
+			text.setMaxWidth(sPane.getWidth());
+			text.setBorder(null);
+			convo.add(text, 1, messageNo);
+			messageNo++;
+			
+			//disable scrolling
+			
+			
+			sPane.setVvalue(1.0);
+
+
 		}
 
 		public void sendMessage(String message) {
 			writer.println(ID + separator + name + separator + message);
 			writer.flush();
 		}
+
+
 
 
 	}
@@ -190,11 +326,11 @@ public class ChatClient extends Application {
 				while ((incoming = reader.readLine()) != null) {
 
 					String[] message = incoming.split(separator);
+					
+					
 					if (message[0].equals("GETONLINE")) {
 
-
 						Platform.runLater(new Runnable() {
-
 							@Override
 							public void run() { 
 								loggedIn(message[2].split(nameSeparator));
@@ -203,9 +339,46 @@ public class ChatClient extends Application {
 
 					}
 
+					else if (isNumeric(message[0])) {
+						Platform.runLater(new Runnable() {
+							@Override
+							public void run() { 
+
+								int ID = Integer.parseInt(message[0]);
+								if (chatWindows.containsKey(ID)) {
+									chatWindows.get(ID).updateChat(message);
+								}
+
+								else {
+									startChat(message);
+								}	
+							}
+						});
+
+					}
+					else if (message[0].equals("USEREXISTS")) {
+						Platform.runLater(new Runnable() {
+							@Override
+							public void run() { 
+								userExists(message);
+							}
+						});
+					}
+
+
 				}
 			} catch (IOException ex) { ex.printStackTrace(); }			
 		}
+	}
+
+	private static boolean isNumeric(String str) {  
+		try {  
+			double d = Double.parseDouble(str);  
+		}  
+		catch(NumberFormatException nfe) {  
+			return false;  
+		}  
+		return true;  
 	}
 
 	public static void main(String[] args) {
@@ -213,5 +386,7 @@ public class ChatClient extends Application {
 			launch(args);
 		} catch (Exception e) { e.printStackTrace(); }
 	}
+
+
 
 }
