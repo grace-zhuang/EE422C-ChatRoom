@@ -1,4 +1,4 @@
-/* CHAT ROOM chatServer.java
+/* CHAT ROOM ChatServer.java
  * EE422C Project 7 submission by
  * Samuel Zhang
  * shz96
@@ -18,13 +18,30 @@ import java.util.*;
 
 
 public class ChatServer {
-	private List<ChatRoom> openChats;
-	private Map<String, ClientObserver> userObservers;
+	private static List<ChatRoom> openChats;
+	private static Map<String, ClientObserver> userObservers;
 	private static final String separator = Character.toString((char) 31);
+	private static final String nameSeparator = Character.toString((char) 29);
+	private static String fileName = "C:\\ChatRoom\\users.txt";
+	private boolean addedNewUsers = false;
 
-	public ChatServer() {
+
+
+	public ChatServer() throws FileNotFoundException, IOException {
 		openChats = new ArrayList<ChatRoom>();
 		userObservers = new HashMap<String, ClientObserver>();
+
+		// Create one directory
+		new File("C:\\ChatRoom").mkdir();
+
+		File yourFile = new File(fileName);
+
+		// create new file if it doesn't exist
+		try {
+			yourFile.createNewFile();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} 
 	}
 
 	public void setUpNetworking() throws Exception {
@@ -32,6 +49,7 @@ public class ChatServer {
 		ServerSocket serverSock = new ServerSocket(4242); 
 		while (true) { 
 			Socket clientSocket = serverSock.accept();
+			System.out.println("Received connection " + clientSocket);
 			ClientObserver writer = new ClientObserver(clientSocket.getOutputStream());
 			Thread t = new Thread(new ClientHandler(clientSocket, writer)); 
 			t.start(); 
@@ -47,28 +65,61 @@ public class ChatServer {
 			Socket sock = clientSocket;
 			try {
 				reader = new BufferedReader(new InputStreamReader(sock.getInputStream())); 
+				this.writer = writer;
 			} 
 			catch (IOException e) { 
 				e.printStackTrace();
 			}
 		}
+
 		public void run() {
 			String message;
 			try {
 				while ((message = reader.readLine()) != null) {
 					String[] array = message.split(separator);
-					
+
 					// input is a message with a chat room ID attached to it
 					if(isNumeric(array[0])) {
-						openChats.get(0).sendMessage(message);
+						openChats.get(Integer.parseInt(array[0])).sendMessage(message);
 					}
-					
-					// a user should send in its username when it is first created
+
+					// a user should send in its user name when it is first created
 					else if(array[0].equals("NEWUSER")) {
 						String user = array[1];
-						userObservers.put(user, this.writer);
+						String pwd = array[2];
+
+						boolean userExists = false;
+						Scanner inFile = new Scanner(new FileReader(fileName));
+						while(inFile.hasNext()) {
+							String line = inFile.nextLine();
+							if (line.toUpperCase().contains(("***" + array[1]).toUpperCase())) {
+								userExists = true;
+							}
+						}
+						inFile.close();
+
+						if(userObservers.containsKey(user) || userExists) {
+							userObservers.put("ERRORNAME", this.writer);
+							String error = "USEREXISTS" + separator + "ERRORNAME" + separator +  "ERRORNAME";
+							String[] tempArray = error.split(separator);
+							ChatRoom temp = new ChatRoom();
+							temp.addUsers(tempArray);
+							temp.sendMessage(error);
+							userObservers.remove("ERRORNAME");
+						}
+						else {
+							userObservers.put(user, this.writer);
+							System.out.println(this.writer);
+							addedNewUsers = true;
+							
+							PrintWriter out = new PrintWriter(new FileWriter(fileName, true));
+							out.println("***" + user + "###" + pwd);
+							out.close();
+						}
+
+
 					}
-					
+
 					// create a chat room when user requests to chat with others
 					// users are separated by '|' when received
 					else if(array[0].equals("NEWCHAT")) {
@@ -76,7 +127,80 @@ public class ChatServer {
 						openChats.add(newChat);
 						newChat.setID(openChats.indexOf(newChat));
 						newChat.addUsers(array);
-						newChat.sendMessage("" + Integer.toString(newChat.getID()) + separator + "CONSOLE" + separator + "This is a new chat, send a message!" );
+
+						String userString = "";
+						String[] users = array[2].split(nameSeparator);
+						for(int i = 0; i < users.length; i++) {
+							userString += users[i] + ", ";
+						}
+						userString += array[1];
+
+						newChat.sendMessage("" + Integer.toString(newChat.getID()) + separator + "CONSOLE" + separator + "This is a new chat between: " + userString);
+					}
+
+					else if(array[0].equals("GETONLINE")) {
+
+						if(addedNewUsers) {
+							addedNewUsers = false;
+							Set<String> keys = 	userObservers.keySet();
+							String names = "";
+
+							// create String with all online user names
+							for(String user: keys) {
+								names += user + nameSeparator;
+							}
+
+							// return back GETONLINE string with user names separated by nameSeparator
+							names = ("GETONLINE" + separator + array[1] + separator + names);
+
+							// use chat room observer pattern to send message
+							String[] tempArray = names.split(separator);
+							ChatRoom temp = new ChatRoom();
+							temp.addUsers(tempArray);
+							temp.sendMessage(names);
+						}
+					}
+					
+					else if(array[0].equals("LOGIN")) {
+						
+						String user = array[1];
+						String pwd = array[2];
+						if(userObservers.containsKey(user)) {
+							userObservers.put("ERRORNAME", this.writer);
+							String error = "USEREXISTS" + separator + "ERRORNAME" + separator +  "ERRORNAME";
+							String[] tempArray = error.split(separator);
+							ChatRoom temp = new ChatRoom();
+							temp.addUsers(tempArray);
+							temp.sendMessage(error);
+							userObservers.remove("ERRORNAME");
+						}
+						
+						boolean userExists = false;
+						Scanner inFile = new Scanner(new FileReader(fileName));
+						while(inFile.hasNext()) {
+							String line = inFile.nextLine();
+							if (line.toUpperCase().contains((("***") + array[1]).toUpperCase()) && line.contains("###" + pwd)) {
+								userExists = true;
+							}
+						}
+						
+						if(userExists) {
+							userObservers.put(user, this.writer);
+							System.out.println(this.writer);
+							addedNewUsers = true;
+						} else {
+							userObservers.put("ERRORNAME", this.writer);
+							String error = "WRONGPASS" + separator + "ERRORNAME" + separator +  "ERRORNAME";
+							String[] tempArray = error.split(separator);
+							ChatRoom temp = new ChatRoom();
+							temp.addUsers(tempArray);
+							temp.sendMessage(error);
+							userObservers.remove("ERRORNAME");
+						}
+						
+					
+						
+						inFile.close();
 					}
 				}
 			} catch (IOException e) {
@@ -102,7 +226,7 @@ public class ChatServer {
 
 	class ChatRoom extends Observable {
 		private int ID;
-		
+
 		public void setID(int ID) {
 			this.ID = ID;
 		}
@@ -110,20 +234,22 @@ public class ChatServer {
 		public int getID() {
 			return ID;
 		}
-		
+
 		public void addUsers(String[] array) {
 			addObserver(userObservers.get(array[1]));
-			String[] otherUsers = array[2].split("|");
+			String[] otherUsers = array[2].split(nameSeparator);
 			for(int i = 0; i < otherUsers.length; i++) {
 				addObserver(userObservers.get(otherUsers[i]));
 			}
 		}
-		
+
 		public void sendMessage(String message) {
 			setChanged();
 			notifyObservers(message);
 		}
 	}
+
+
 
 	public static void main(String[] args) {
 		try {
