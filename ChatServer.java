@@ -173,6 +173,7 @@ public class ChatServer {
 							temp.addUsers(tempArray);
 							temp.sendMessage(error);
 							userObservers.remove("ERRORNAME");
+							return;
 						}
 						
 						boolean userExists = false;

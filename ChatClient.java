@@ -25,6 +25,8 @@ import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -35,10 +37,14 @@ import javafx.scene.control.ScrollPane.ScrollBarPolicy;
 import javafx.scene.control.TextField;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.layout.Background;
+import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.ColumnConstraints;
+import javafx.scene.layout.CornerRadii;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.RowConstraints;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
 
@@ -68,11 +74,11 @@ public class ChatClient extends Application {
 		Label instruction = new Label("Please enter a username:");
 		TextField username = new TextField();
 		username.setPromptText("Username");
-		
+
 		Label instruction2 = new Label("Please enter a password:");
 		TextField password = new TextField();
 		password.setPromptText("Password");
-		
+
 		Button createAcc = new Button("Create Account");
 		createAcc.setOnAction(new EventHandler<ActionEvent>() {
 
@@ -80,20 +86,20 @@ public class ChatClient extends Application {
 			public void handle(ActionEvent arg0) {
 				String user = username.getText();
 				String pwd = password.getText();
-				
-				if (user != null && pwd != null) {
+
+				if (!user.equals("") && !pwd.equals("")) {
 					name = user;
 
 					writer.println("NEWUSER" + separator + user + separator + pwd);
 					writer.flush();
-					
+
 					writer.println("GETONLINE" + separator + name);
 					writer.flush();
 				}	
 			}
 
 		});
-		
+
 		Button login = new Button("Login");
 		login.setOnAction(new EventHandler<ActionEvent>() {
 
@@ -101,13 +107,13 @@ public class ChatClient extends Application {
 			public void handle(ActionEvent arg0) {
 				String user = username.getText();
 				String pwd = password.getText();
-				
-				if (user != null && pwd != null) {
+
+				if (!user.equals("") && !pwd.equals("")) {
 					name = user;
 
 					writer.println("LOGIN" + separator + user + separator + pwd);
 					writer.flush();
-					
+
 					writer.println("GETONLINE" + separator + name);
 					writer.flush();
 				}	
@@ -142,59 +148,70 @@ public class ChatClient extends Application {
 		Thread readerThread = new Thread(new IncomingReader()); 
 		readerThread.start();
 	}
-	
+
 	public void userExists(String[] message) { 
-		
-		
+
+
 		for(ListIterator<Node> iterator = open.getChildren().listIterator(); iterator.hasNext();) {
 			Node currentNode = iterator.next();
 			if (currentNode instanceof Label && ((Label)currentNode).getText().contains("ERROR")) {
 				iterator.remove();
 			}
 		}
-	
+
 		String error = "ERROR: Username already exists/is online. Enter another username.";
 		Label notif = new Label();
 		notif.setText(error);
 		notif.setWrapText(true);
 		open.getChildren().addAll(notif);
-		
-		
+
+
 	}
-	
-public void wrongPass(String[] message) { 
-		
-		
+
+	public void wrongPass(String[] message) { 
+
+
 		for(ListIterator<Node> iterator = open.getChildren().listIterator(); iterator.hasNext();) {
 			Node currentNode = iterator.next();
 			if (currentNode instanceof Label && ((Label)currentNode).getText().contains("ERROR")) {
 				iterator.remove();
 			}
 		}
-	
+
 		String error = "ERROR: Invalid Password. Please Retry.";
 		Label notif = new Label();
 		notif.setText(error);
 		notif.setWrapText(true);
 		open.getChildren().addAll(notif);
-		
-		
+
+
 	}
 
 	public void loggedIn(String[] available) {
-	
-	
+
+		//close old stage
+		double x = home.getX();
+		double y = home.getY();
 		home.close();
+		
 		home = new Stage();
+		home.setX(x);
+		home.setY(y);
+		
 		VBox chat = new VBox();
 		Label welcome = new Label("Welcome, " + name + "!");
 
 		Label people = new Label("Who would you like to chat with?");
+		chat.getChildren().addAll(welcome, people);
 
-		CheckBox[] online = new CheckBox[available.length];
+		CheckBox[] online = new CheckBox[available.length-1];
+		int j = 0;
 		for (int i = 0; i < available.length; i++) {
-			online[i] = new CheckBox(available[i]);
-			chat.getChildren().add(online[i]);
+			if(!(available[i].equals(name))) {
+				online[j] = new CheckBox(available[i]);
+				chat.getChildren().add(online[j]);
+				j++;
+			}
 		}
 
 		Button done = new Button("Start Chat");
@@ -204,9 +221,14 @@ public void wrongPass(String[] message) {
 			public void handle(ActionEvent arg0) {
 
 				String names = "";
+				System.out.println(online.length);
 				for(int i = 0; i < online.length; i++) {
 					if (online[i].isSelected())
 						names += online[i].getText() + nameSeparator;
+				}
+				
+				if (names.equals("")) {
+					return;
 				}
 
 				String message = "NEWCHAT" + separator + name + separator + names;
@@ -214,11 +236,11 @@ public void wrongPass(String[] message) {
 				writer.flush();
 
 			}});
-		
-		
 
 
-		chat.getChildren().addAll(welcome, people, done);
+
+
+		chat.getChildren().add(done);
 		Scene realScene = new Scene(chat, 300, 300);
 		home.setScene(realScene);
 		home.show();
@@ -246,22 +268,22 @@ public void wrongPass(String[] message) {
 		private int messageNo = 0;
 
 		public ChatWindow(int num) {
-			
-			
-			
+
+
+
 			ID = num;
 			this.chat = new Stage();
 			chat.setTitle("Chat Window");
 
 			convo = new GridPane();
-			
+
 			sPane = new ScrollPane();
 			sPane.setVbarPolicy(ScrollBarPolicy.ALWAYS);
 			sPane.setHbarPolicy(ScrollBarPolicy.NEVER);
-			
-			
-			
-			
+
+
+
+
 			TextField text = new TextField();
 			text.setPromptText("Enter message");
 			Button send = new Button("Send");
@@ -278,22 +300,22 @@ public void wrongPass(String[] message) {
 				}
 
 			});
-			
+
 			// send message on pressing 
 			text.setOnKeyPressed(new EventHandler<KeyEvent>() {
-			    @Override
-			    public void handle(KeyEvent keyEvent) {
-			        if (keyEvent.getCode() == KeyCode.ENTER)  {
-			        	String s = text.getText();
+				@Override
+				public void handle(KeyEvent keyEvent) {
+					if (keyEvent.getCode() == KeyCode.ENTER)  {
+						String s = text.getText();
 						if (s != null) {
 							sendMessage(s);
 							text.clear();
 							text.setPromptText("Enter message");
 						}
-			        }
-			    }
+					}
+				}
 			});
-			
+
 			VBox box = new VBox();
 			GridPane screen = new GridPane();
 			screen.getRowConstraints().add(new RowConstraints(270));
@@ -303,8 +325,8 @@ public void wrongPass(String[] message) {
 			screen.add(sPane, 0, 0);
 			screen.add(text,0,1);
 			screen.add(send, 1, 1);
-			
-			
+
+
 			sPane.setContent(convo);
 			box.getChildren().addAll(screen);
 			Scene scene = new Scene(box, 300, 300);
@@ -312,7 +334,7 @@ public void wrongPass(String[] message) {
 			chat.setScene(scene);
 			chat.show();
 		}
-		
+
 		public void setTitle(String[] message) {
 			String sentMessage = message[2];
 			sentMessage = sentMessage.substring(28, sentMessage.length());
@@ -333,16 +355,19 @@ public void wrongPass(String[] message) {
 			Label text = new Label();
 			text.setText(message[1] + ": " + message[2]);
 			text.setWrapText(true);
-			//text.setPrefHeight(12 * ((message[1].length() + message[2].length()) / 18 + 2));
-			//text.setMaxHeight(12 * ((message[1].length() + message[2].length()) / 18 + 2));
+			
+			// if you are the user that send the message - set stuff to differentiate here
+			if(message[1].equals(name)) {
+				//text.setAlignment(Pos.CENTER_RIGHT);
+				//text.setBackground(new Background(new BackgroundFill(Color.BLUE, CornerRadii.EMPTY, Insets.EMPTY)));
+				//text.setTextFill(Color.WHITE);
+			}
 			text.setMaxWidth(sPane.getWidth());
 			text.setBorder(null);
 			convo.add(text, 1, messageNo);
 			messageNo++;
-			
-			//disable scrolling
-			
-			
+
+
 			sPane.setVvalue(1.0);
 
 
@@ -367,8 +392,8 @@ public void wrongPass(String[] message) {
 				while ((incoming = reader.readLine()) != null) {
 
 					String[] message = incoming.split(separator);
-					
-					
+
+
 					if (message[0].equals("GETONLINE")) {
 
 						Platform.runLater(new Runnable() {
@@ -405,7 +430,7 @@ public void wrongPass(String[] message) {
 							}
 						});
 					}
-					
+
 					else if (message[0].equals("WRONGPASS")) {
 						Platform.runLater(new Runnable() {
 							@Override
