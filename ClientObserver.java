@@ -1,3 +1,15 @@
+/* CHAT ROOM ChatObserver.java
+ * EE422C Project 7 submission by
+ * Samuel Zhang
+ * shz96
+ * 16225
+ * Grace Zhuang
+ * gpz68
+ * 16215
+ * Slip days used: <0>
+ * Spring 2017
+ */
+
 package assignment7;
 
 import java.io.OutputStream;

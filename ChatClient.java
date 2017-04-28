@@ -1,4 +1,4 @@
-/* CHAT ROOM chatClient.java
+/* CHAT ROOM ChatClient.java
  * EE422C Project 7 submission by
  * Samuel Zhang
  * shz96
@@ -77,16 +77,22 @@ public class ChatClient extends Application {
 		Label instruction = new Label("Please enter a username:");
 		TextField username = new TextField();
 		username.setPromptText("Username");
+		
+		Label instruction2 = new Label("Please enter a password:");
+		TextField password = new TextField();
+		password.setPromptText("Password");
+		
 		Button done = new Button("Create Account");
 		done.setOnAction(new EventHandler<ActionEvent>() {
 
 			@Override
 			public void handle(ActionEvent arg0) {
-				String s = username.getText();
-				if (s != null) { //FIX THIS!!!!!
-					name = s;
+				String user = username.getText();
+				
+				if (user != null) {
+					name = user;
 
-					writer.println("NEWUSER" + separator + s);
+					writer.println("NEWUSER" + separator + user + separator );
 					writer.flush();
 					
 					writer.println("GETONLINE" + separator + name);
@@ -126,10 +132,10 @@ public class ChatClient extends Application {
 	
 	public void userExists(String[] message) { 
 		
-		Node currentNode = null;
 		
-		for(ListIterator<Node> iterator = open.getChildren().listIterator(); iterator.hasNext(); currentNode = iterator.next()) {
-			if (currentNode instanceof Label && !((Label)currentNode).getText().equals("Welcome to Chat Room!")) {
+		for(ListIterator<Node> iterator = open.getChildren().listIterator(); iterator.hasNext();) {
+			Node currentNode = iterator.next();
+			if (currentNode instanceof Label && ((Label)currentNode).getText().equals("Username already exists. Enter another username.")) {
 				iterator.remove();
 			}
 		}
@@ -137,7 +143,7 @@ public class ChatClient extends Application {
 		String error = "Username already exists. Enter another username.";
 		Label notif = new Label();
 		notif.setText(error);
-		open.getChildren().add(notif);
+		open.getChildren().addAll(notif);
 		
 		
 	}
@@ -175,6 +181,8 @@ public class ChatClient extends Application {
 				writer.flush();
 
 			}});
+		
+		
 
 
 		chat.getChildren().addAll(welcome, people, done);
@@ -274,7 +282,7 @@ public class ChatClient extends Application {
 		
 		public void setTitle(String[] message) {
 			String sentMessage = message[2];
-			sentMessage = sentMessage.substring(27, sentMessage.length());
+			sentMessage = sentMessage.substring(28, sentMessage.length());
 			System.out.println(sentMessage);
 			chat.setTitle(sentMessage);
 		}
