@@ -18,7 +18,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.ListIterator;
 
@@ -26,28 +25,20 @@ import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
-import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
-import javafx.scene.control.ScrollBar;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.ScrollPane.ScrollBarPolicy;
-import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
-import javafx.scene.layout.Background;
-import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.ColumnConstraints;
-import javafx.scene.layout.CornerRadii;
 import javafx.scene.layout.GridPane;
-import javafx.scene.layout.Priority;
 import javafx.scene.layout.RowConstraints;
 import javafx.scene.layout.VBox;
-import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
 
@@ -82,17 +73,39 @@ public class ChatClient extends Application {
 		TextField password = new TextField();
 		password.setPromptText("Password");
 		
-		Button done = new Button("Create Account");
-		done.setOnAction(new EventHandler<ActionEvent>() {
+		Button createAcc = new Button("Create Account");
+		createAcc.setOnAction(new EventHandler<ActionEvent>() {
 
 			@Override
 			public void handle(ActionEvent arg0) {
 				String user = username.getText();
+				String pwd = password.getText();
 				
-				if (user != null) {
+				if (user != null && pwd != null) {
 					name = user;
 
-					writer.println("NEWUSER" + separator + user + separator );
+					writer.println("NEWUSER" + separator + user + separator + pwd);
+					writer.flush();
+					
+					writer.println("GETONLINE" + separator + name);
+					writer.flush();
+				}	
+			}
+
+		});
+		
+		Button login = new Button("Login");
+		login.setOnAction(new EventHandler<ActionEvent>() {
+
+			@Override
+			public void handle(ActionEvent arg0) {
+				String user = username.getText();
+				String pwd = password.getText();
+				
+				if (user != null && pwd != null) {
+					name = user;
+
+					writer.println("LOGIN" + separator + user + separator + pwd);
 					writer.flush();
 					
 					writer.println("GETONLINE" + separator + name);
@@ -102,7 +115,7 @@ public class ChatClient extends Application {
 
 		});
 
-		open.getChildren().addAll(title, instruction, username, done);
+		open.getChildren().addAll(title, instruction, username , password, createAcc, login);
 
 		Scene scene = new Scene(open, 300, 300);
 		primaryStage.setScene(scene);
@@ -135,14 +148,34 @@ public class ChatClient extends Application {
 		
 		for(ListIterator<Node> iterator = open.getChildren().listIterator(); iterator.hasNext();) {
 			Node currentNode = iterator.next();
-			if (currentNode instanceof Label && ((Label)currentNode).getText().equals("Username already exists. Enter another username.")) {
+			if (currentNode instanceof Label && ((Label)currentNode).getText().contains("ERROR")) {
 				iterator.remove();
 			}
 		}
 	
-		String error = "Username already exists. Enter another username.";
+		String error = "ERROR: Username already exists/is online. Enter another username.";
 		Label notif = new Label();
 		notif.setText(error);
+		notif.setWrapText(true);
+		open.getChildren().addAll(notif);
+		
+		
+	}
+	
+public void wrongPass(String[] message) { 
+		
+		
+		for(ListIterator<Node> iterator = open.getChildren().listIterator(); iterator.hasNext();) {
+			Node currentNode = iterator.next();
+			if (currentNode instanceof Label && ((Label)currentNode).getText().contains("ERROR")) {
+				iterator.remove();
+			}
+		}
+	
+		String error = "ERROR: Invalid Password. Please Retry.";
+		Label notif = new Label();
+		notif.setText(error);
+		notif.setWrapText(true);
 		open.getChildren().addAll(notif);
 		
 		
@@ -369,6 +402,15 @@ public class ChatClient extends Application {
 							@Override
 							public void run() { 
 								userExists(message);
+							}
+						});
+					}
+					
+					else if (message[0].equals("WRONGPASS")) {
+						Platform.runLater(new Runnable() {
+							@Override
+							public void run() { 
+								wrongPass(message);
 							}
 						});
 					}

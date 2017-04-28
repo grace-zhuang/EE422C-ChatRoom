@@ -86,12 +86,13 @@ public class ChatServer {
 					// a user should send in its user name when it is first created
 					else if(array[0].equals("NEWUSER")) {
 						String user = array[1];
+						String pwd = array[2];
 
 						boolean userExists = false;
 						Scanner inFile = new Scanner(new FileReader(fileName));
 						while(inFile.hasNext()) {
 							String line = inFile.nextLine();
-							if (line.equalsIgnoreCase(array[1])) {
+							if (line.toUpperCase().contains(("***" + array[1]).toUpperCase())) {
 								userExists = true;
 							}
 						}
@@ -112,7 +113,7 @@ public class ChatServer {
 							addedNewUsers = true;
 							
 							PrintWriter out = new PrintWriter(new FileWriter(fileName, true));
-							out.println(array[1]);
+							out.println("***" + user + "###" + pwd);
 							out.close();
 						}
 
@@ -158,6 +159,48 @@ public class ChatServer {
 							temp.addUsers(tempArray);
 							temp.sendMessage(names);
 						}
+					}
+					
+					else if(array[0].equals("LOGIN")) {
+						
+						String user = array[1];
+						String pwd = array[2];
+						if(userObservers.containsKey(user)) {
+							userObservers.put("ERRORNAME", this.writer);
+							String error = "USEREXISTS" + separator + "ERRORNAME" + separator +  "ERRORNAME";
+							String[] tempArray = error.split(separator);
+							ChatRoom temp = new ChatRoom();
+							temp.addUsers(tempArray);
+							temp.sendMessage(error);
+							userObservers.remove("ERRORNAME");
+						}
+						
+						boolean userExists = false;
+						Scanner inFile = new Scanner(new FileReader(fileName));
+						while(inFile.hasNext()) {
+							String line = inFile.nextLine();
+							if (line.toUpperCase().contains((("***") + array[1]).toUpperCase()) && line.contains("###" + pwd)) {
+								userExists = true;
+							}
+						}
+						
+						if(userExists) {
+							userObservers.put(user, this.writer);
+							System.out.println(this.writer);
+							addedNewUsers = true;
+						} else {
+							userObservers.put("ERRORNAME", this.writer);
+							String error = "WRONGPASS" + separator + "ERRORNAME" + separator +  "ERRORNAME";
+							String[] tempArray = error.split(separator);
+							ChatRoom temp = new ChatRoom();
+							temp.addUsers(tempArray);
+							temp.sendMessage(error);
+							userObservers.remove("ERRORNAME");
+						}
+						
+					
+						
+						inFile.close();
 					}
 				}
 			} catch (IOException e) {
