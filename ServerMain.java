@@ -108,18 +108,11 @@ public class ServerMain {
 						for(int i = 0; i< users.length; i++) {
 							names[i+1] = users[i];
 						}
-						
+
 						boolean exist = false;
-						boolean flag = false;
 						int ID = -1;
 						for(ChatRoom room: openChats) {
-							for(String name: names) {
-								if(!room.users.contains(name)) {
-									flag = true;
-									break;
-								}
-							}
-							if (!flag) {
+							if(room.users.containsAll(Arrays.asList(names)) && room.users.size() == names.length) {
 								exist = true;
 								ID = room.getID();
 								break;
@@ -130,218 +123,217 @@ public class ServerMain {
 
 
 
-						if(!exist) {
-							ChatRoom newChat = new ChatRoom();
-							openChats.add(newChat);
-							newChat.setID(openChats.indexOf(newChat));
-							newChat.addUsers(array);
+							if(!exist) {
+								ChatRoom newChat = new ChatRoom();
+								openChats.add(newChat);
+								newChat.setID(openChats.indexOf(newChat));
+								newChat.addUsers(array);
 
-							String userString = "";
-							for(int i = 0; i < users.length; i++) {
-								userString += users[i] + ", ";
-							}
-							userString += array[1];
+								String userString = "";
+								for(int i = 0; i < users.length; i++) {
+									userString += users[i] + ", ";
+								}
+								userString += array[1];
 
-							newChat.sendMessage("" + Integer.toString(newChat.getID()) + separator + "CONSOLE" + separator + "This is a new chat between: " + userString);
-						} else {
-							ChatRoom chat = openChats.get(ID);
-							chat.sendMessage("" + Integer.toString(chat.getID()) + separator + "CONSOLE" + separator + "Chat refresh requested.");
-						}
-					}
-
-					// a user should send in its user name when it is first created
-					else if(array[0].equals("NEWUSER")) {
-						String user = array[1];
-						String pwd = array[2];
-
-						// check to see if user has already been created in text file
-						boolean userExists = false;
-						Scanner inFile = new Scanner(new FileReader(fileName));
-						while(inFile.hasNext()) {
-							String line = inFile.nextLine();
-							if (line.toUpperCase().contains(("***" + array[1]).toUpperCase())) {
-								userExists = true;
+								newChat.sendMessage("" + Integer.toString(newChat.getID()) + separator + "CONSOLE" + separator + "This is a new chat between: " + userString);
+							} else {
+								ChatRoom chat = openChats.get(ID);
+								chat.sendMessage("" + Integer.toString(chat.getID()) + separator + "CONSOLE" + separator + "Chat refresh requested.");
 							}
 						}
 
-						inFile.close();
+						// a user should send in its user name when it is first created
+						else if(array[0].equals("NEWUSER")) {
+							String user = array[1];
+							String pwd = array[2];
 
-						// if user is online OR user already exists within text file
-						if(userObservers.containsKey(user) || userExists) {
-							userObservers.put("ERRORNAME", this.writer);
-							String error = "USEREXISTS" + separator + "ERRORNAME" + separator +  "ERRORNAME";
-							String[] tempArray = error.split(separator);
-							ChatRoom temp = new ChatRoom();
-							temp.addUsers(tempArray);
-							temp.sendMessage(error);
-							userObservers.remove("ERRORNAME");
-						}
-						else {
-							userObservers.put(user, this.writer);
-							addedNewUsers = true;
-
-							PrintWriter out = new PrintWriter(new FileWriter(fileName, true));
-							out.println("***" + user + "###" + pwd);
-							out.close();
-						}
-
-
-					}
-
-					// attempt to try to log into chat server
-					else if(array[0].equals("LOGIN")) {
-
-
-						String user = array[1];
-						String pwd = array[2];
-						if(userObservers.containsKey(user)) {
-							userObservers.put("ERRORNAME", this.writer);
-							String error = "ALREADYLOGGEDIN" + separator + "ERRORNAME" + separator +  "ERRORNAME";
-							String[] tempArray = error.split(separator);
-							ChatRoom temp = new ChatRoom();
-							temp.addUsers(tempArray);
-							temp.sendMessage(error);
-							userObservers.remove("ERRORNAME");
-
-						}
-						else {
+							// check to see if user has already been created in text file
 							boolean userExists = false;
 							Scanner inFile = new Scanner(new FileReader(fileName));
 							while(inFile.hasNext()) {
 								String line = inFile.nextLine();
-								if (line.toUpperCase().contains((("***") + array[1]).toUpperCase()) && line.contains("###" + pwd)) {
+								if (line.toUpperCase().contains(("***" + array[1]).toUpperCase())) {
 									userExists = true;
 								}
 							}
 
-							if(userExists) {
-								userObservers.put(user, this.writer);
-								System.out.println(this.writer);
-								addedNewUsers = true;
-							} else {
+							inFile.close();
+
+							// if user is online OR user already exists within text file
+							if(userObservers.containsKey(user) || userExists) {
 								userObservers.put("ERRORNAME", this.writer);
-								String error = "WRONGPASS" + separator + "ERRORNAME" + separator +  "ERRORNAME";
+								String error = "USEREXISTS" + separator + "ERRORNAME" + separator +  "ERRORNAME";
 								String[] tempArray = error.split(separator);
 								ChatRoom temp = new ChatRoom();
 								temp.addUsers(tempArray);
 								temp.sendMessage(error);
 								userObservers.remove("ERRORNAME");
 							}
+							else {
+								userObservers.put(user, this.writer);
+								addedNewUsers = true;
 
-
-
-							inFile.close();
-						}
-					}
-
-					// retrieve all online people if there has been a change in 
-					// # of clients and print out change to every client
-					else if(array[0].equals("GETONLINE")) {
-
-						if(addedNewUsers) {
-							addedNewUsers = false;
-							Set<String> keys = 	userObservers.keySet();
-							String names = "";
-
-							// create String with all online user names
-							for(String user: keys) {
-								names += user + nameSeparator;
+								PrintWriter out = new PrintWriter(new FileWriter(fileName, true));
+								out.println("***" + user + "###" + pwd);
+								out.close();
 							}
 
-							// return back GETONLINE string with user names separated by nameSeparator
-							names = ("GETONLINE" + separator + array[1] + separator + names);
 
-							// use chat room observer pattern to send message
-							String[] tempArray = names.split(separator);
-							ChatRoom temp = new ChatRoom();
-							temp.addUsers(tempArray);
-							temp.sendMessage(names);
+						}
+
+						// attempt to try to log into chat server
+						else if(array[0].equals("LOGIN")) {
+
+
+							String user = array[1];
+							String pwd = array[2];
+							if(userObservers.containsKey(user)) {
+								userObservers.put("ERRORNAME", this.writer);
+								String error = "ALREADYLOGGEDIN" + separator + "ERRORNAME" + separator +  "ERRORNAME";
+								String[] tempArray = error.split(separator);
+								ChatRoom temp = new ChatRoom();
+								temp.addUsers(tempArray);
+								temp.sendMessage(error);
+								userObservers.remove("ERRORNAME");
+
+							}
+							else {
+								boolean userExists = false;
+								Scanner inFile = new Scanner(new FileReader(fileName));
+								while(inFile.hasNext()) {
+									String line = inFile.nextLine();
+									if (line.toUpperCase().contains((("***") + array[1]).toUpperCase()) && line.contains("###" + pwd)) {
+										userExists = true;
+									}
+								}
+
+								if(userExists) {
+									userObservers.put(user, this.writer);
+									addedNewUsers = true;
+								} else {
+									userObservers.put("ERRORNAME", this.writer);
+									String error = "WRONGPASS" + separator + "ERRORNAME" + separator +  "ERRORNAME";
+									String[] tempArray = error.split(separator);
+									ChatRoom temp = new ChatRoom();
+									temp.addUsers(tempArray);
+									temp.sendMessage(error);
+									userObservers.remove("ERRORNAME");
+								}
+
+
+
+								inFile.close();
+							}
+						}
+
+						// retrieve all online people if there has been a change in 
+						// # of clients and print out change to every client
+						else if(array[0].equals("GETONLINE")) {
+
+							if(addedNewUsers) {
+								addedNewUsers = false;
+								Set<String> keys = 	userObservers.keySet();
+								String names = "";
+
+								// create String with all online user names
+								for(String user: keys) {
+									names += user + nameSeparator;
+								}
+
+								// return back GETONLINE string with user names separated by nameSeparator
+								names = ("GETONLINE" + separator + array[1] + separator + names);
+
+								// use chat room observer pattern to send message
+								String[] tempArray = names.split(separator);
+								ChatRoom temp = new ChatRoom();
+								temp.addUsers(tempArray);
+								temp.sendMessage(names);
+							}
+						}
+
+						// LOGOUT removes user from our HashMap
+						else if(array[0].equals("LOGOUT")) {
+							userObservers.remove(array[1]);
+							addedNewUsers = true;
 						}
 					}
+				} catch (IOException e) {
 
-					// LOGOUT removes user from our HashMap
-					else if(array[0].equals("LOGOUT")) {
-						userObservers.remove(array[1]);
-						addedNewUsers = true;
+					e.printStackTrace();
+
+				}
+			}
+
+			/** OBTAINED FROM http://stackoverflow.com/a/14206789
+			 * 
+			 * @param str The String to be parsed
+			 * @return true if string is numeric, false otherwise	
+			 */
+			public boolean isNumeric(String str) {  
+				try {  
+					double d = Double.parseDouble(str);  
+				}  
+				catch(NumberFormatException nfe) {  
+					return false;  
+				}  
+				return true;  
+			}
+		}
+
+		/**
+		 * ChatRoom acts as a holder of information and implements the Observable
+		 * abstract class which allows us to utilize the Observer/Observable
+		 * framework built into Java
+		 */
+		class ChatRoom extends Observable {
+
+			public List<String> users = new ArrayList<String>();
+			private int ID;
+
+			public void setID(int ID) {
+				this.ID = ID;
+			}
+
+			public int getID() {
+				return ID;
+			}
+
+			/**
+			 * Adds users to the observers list
+			 * @param array holds a username within array[1] and a list of user
+			 * 				in array[2] which is separated by nameSeparator
+			 */
+			public void addUsers(String[] array) {
+				if(userObservers.containsKey(array[1])) {
+					addObserver(userObservers.get(array[1]));
+					users.add(array[1]);
+				}
+				if(array.length > 2){
+					String[] otherUsers = array[2].split(nameSeparator);
+					for(int i = 0; i < otherUsers.length; i++) {
+						addObserver(userObservers.get(otherUsers[i]));
+						users.add(otherUsers[i]);
 					}
 				}
-			} catch (IOException e) {
+			}
 
-				e.printStackTrace();
-
+			/**
+			 * uses setChanged and pushes message to all Observers
+			 * @param message
+			 */
+			public void sendMessage(String message) {
+				setChanged();
+				notifyObservers(message);
 			}
 		}
 
-		/** OBTAINED FROM http://stackoverflow.com/a/14206789
-		 * 
-		 * @param str The String to be parsed
-		 * @return true if string is numeric, false otherwise	
-		 */
-		public boolean isNumeric(String str) {  
-			try {  
-				double d = Double.parseDouble(str);  
-			}  
-			catch(NumberFormatException nfe) {  
-				return false;  
-			}  
-			return true;  
+
+
+		public static void main(String[] args) {
+			try {
+				new ServerMain().setUpNetworking();
+			} catch (Exception e) { e.printStackTrace(); }
+
+
 		}
 	}
-
-	/**
-	 * ChatRoom acts as a holder of information and implements the Observable
-	 * abstract class which allows us to utilize the Observer/Observable
-	 * framework built into Java
-	 */
-	class ChatRoom extends Observable {
-
-		public List<String> users = new ArrayList<String>();
-		private int ID;
-
-		public void setID(int ID) {
-			this.ID = ID;
-		}
-
-		public int getID() {
-			return ID;
-		}
-
-		/**
-		 * Adds users to the observers list
-		 * @param array holds a username within array[1] and a list of user
-		 * 				in array[2] which is separated by nameSeparator
-		 */
-		public void addUsers(String[] array) {
-			if(userObservers.containsKey(array[1])) {
-				addObserver(userObservers.get(array[1]));
-				users.add(array[1]);
-			}
-			if(array.length > 2){
-				String[] otherUsers = array[2].split(nameSeparator);
-				for(int i = 0; i < otherUsers.length; i++) {
-					addObserver(userObservers.get(otherUsers[i]));
-					users.add(otherUsers[i]);
-				}
-			}
-		}
-
-		/**
-		 * uses setChanged and pushes message to all Observers
-		 * @param message
-		 */
-		public void sendMessage(String message) {
-			setChanged();
-			notifyObservers(message);
-		}
-	}
-
-
-
-	public static void main(String[] args) {
-		try {
-			new ServerMain().setUpNetworking();
-		} catch (Exception e) { e.printStackTrace(); }
-
-
-	}
-}

@@ -202,10 +202,10 @@ public class ClientMain extends Application {
 					writer.println("LOGIN" + separator + user + separator + pwd);
 					writer.flush();
 
-					// called to update everyon else's chat screens to reflect the new user who just logged in
+					// called to update everyone else's chat screens to reflect the new user who just logged in
 					writer.println("GETONLINE" + separator + name);
 					writer.flush();
-					System.out.println("leave");
+
 				}	
 			}
 
@@ -420,7 +420,6 @@ public class ClientMain extends Application {
 					e.printStackTrace();
 				}
 
-				System.out.println("mmmmk");
 				writer.println("GETONLINE" + separator + name);
 				writer.flush();
 
@@ -457,7 +456,7 @@ public class ClientMain extends Application {
 					e.printStackTrace();
 				}
 
-				System.out.println("mmmmk");
+				
 				writer.println("GETONLINE" + separator + name);
 				writer.flush();
 
@@ -488,9 +487,14 @@ public class ClientMain extends Application {
 	public void startChat(String[] message) {
 		int ID = Integer.parseInt(message[0]);
 		ChatWindow newChat = new ChatWindow(ID);
-		chatWindows.put(ID, newChat);
-		newChat.setTitle(message);
+		if(chatWindows.containsKey(ID)) {
+			newChat.setTitle(chatWindows.get(ID).getTitle());
+			chatWindows.get(ID).close();
+		}
+		else
+			newChat.setTitle(message);
 		newChat.updateChat(message);
+		chatWindows.put(ID, newChat);
 	}
 
 	// The ChatWindow class represents the user interface through which a user chats with another user. Included are
@@ -567,6 +571,10 @@ public class ClientMain extends Application {
 			chat.setScene(scene);
 			chat.show();
 		}
+		
+		public void close() {
+			chat.close();
+		}
 
 		/**
 		 * This function sets the title of a chat window to be the name of the person you're chatting with.
@@ -576,6 +584,14 @@ public class ClientMain extends Application {
 			String sentMessage = message[2];
 			sentMessage = sentMessage.substring(28, sentMessage.length());
 			chat.setTitle(sentMessage);
+		}
+		
+		public void setTitle(String title) {
+			chat.setTitle(title);
+		}
+		
+		public String getTitle() {
+			return chat.getTitle();
 		}
 
 		@Override
@@ -672,7 +688,10 @@ public class ClientMain extends Application {
 								
 								// chat window ID is already contained within this user's list of open chat windows
 								if (chatWindows.containsKey(ID)) {
-									chatWindows.get(ID).updateChat(message);
+									if(message[1].equals("CONSOLE") && message[2].equals("Chat refresh requested."))
+										startChat(message);
+									else
+										chatWindows.get(ID).updateChat(message);
 								}
 
 								// new chat being initiated
@@ -683,7 +702,7 @@ public class ClientMain extends Application {
 						});
 					}
 					
-					// server telling cient username is taken, already exists
+					// server telling client username is taken, already exists
 					else if (message[0].equals("USEREXISTS")) {
 						Platform.runLater(new Runnable() {
 							@Override
