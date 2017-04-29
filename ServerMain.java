@@ -16,22 +16,16 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 
-import javafx.application.Application;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
-import javafx.scene.Scene;
-import javafx.scene.control.Button;
-import javafx.scene.layout.VBox;
-import javafx.stage.Stage;
 
-
-public class ServerMain extends Application {
+public class ServerMain {
 	private static List<ChatRoom> openChats;
 	private static Map<String, ClientObserver> userObservers;
 	private static final String separator = Character.toString((char) 31);
 	private static final String nameSeparator = Character.toString((char) 29);
 	private static String fileName = "C:\\ChatRoom\\users.txt";
 	private boolean addedNewUsers = false;
+	private ServerSocket serverSock;
+
 
 
 
@@ -53,9 +47,7 @@ public class ServerMain extends Application {
 	}
 
 	public void setUpNetworking() throws Exception {
-		@SuppressWarnings("resource") 
-		ServerSocket serverSock = new ServerSocket(4242); 
-		launch();
+		this.serverSock = new ServerSocket(4242); 
 		while (true) { 
 			Socket clientSocket = serverSock.accept();
 			System.out.println("Received connection " + clientSocket);
@@ -285,26 +277,7 @@ public class ServerMain extends Application {
 		try {
 			new ServerMain().setUpNetworking();
 		} catch (Exception e) { e.printStackTrace(); }
+
+
 	}
-
-	@Override
-	public void start(Stage primaryStage) throws Exception {
-		primaryStage.setTitle("Server");
-		VBox rando = new VBox();
-		Scene scene = new Scene(rando, 100, 30);
-		Button close = new Button("Turn Off Server");
-		close.setOnAction(new EventHandler<ActionEvent>() {
-
-			@Override
-			public void handle(ActionEvent arg0) {
-				System.out.println("hi");
-			}
-
-		});
-		rando.getChildren().add(close);
-		primaryStage.setScene(scene);
-		primaryStage.show();
-		
-	}
-
 }
