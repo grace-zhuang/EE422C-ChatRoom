@@ -16,8 +16,16 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 
+import javafx.application.Application;
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
+import javafx.scene.Scene;
+import javafx.scene.control.Button;
+import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
 
-public class ServerMain {
+
+public class ServerMain extends Application {
 	private static List<ChatRoom> openChats;
 	private static Map<String, ClientObserver> userObservers;
 	private static final String separator = Character.toString((char) 31);
@@ -59,10 +67,12 @@ public class ServerMain {
 
 	class ClientHandler implements Runnable {
 		private BufferedReader reader;
-		private ClientObserver writer; 
+		private ClientObserver writer;
+		private Socket sock;
 
-		public ClientHandler(Socket clientSocket, ClientObserver writer) { 
-			Socket sock = clientSocket;
+		public ClientHandler(Socket clientSocket, ClientObserver writer) {
+			this.sock = clientSocket;
+
 			try {
 				reader = new BufferedReader(new InputStreamReader(sock.getInputStream())); 
 				this.writer = writer;
@@ -83,42 +93,7 @@ public class ServerMain {
 						openChats.get(Integer.parseInt(array[0])).sendMessage(message);
 					}
 
-					// a user should send in its user name when it is first created
-					else if(array[0].equals("NEWUSER")) {
-						String user = array[1];
-						String pwd = array[2];
 
-						boolean userExists = false;
-						Scanner inFile = new Scanner(new FileReader(fileName));
-						while(inFile.hasNext()) {
-							String line = inFile.nextLine();
-							if (line.toUpperCase().contains(("***" + array[1]).toUpperCase())) {
-								userExists = true;
-							}
-						}
-						inFile.close();
-
-						if(userObservers.containsKey(user) || userExists) {
-							userObservers.put("ERRORNAME", this.writer);
-							String error = "USEREXISTS" + separator + "ERRORNAME" + separator +  "ERRORNAME";
-							String[] tempArray = error.split(separator);
-							ChatRoom temp = new ChatRoom();
-							temp.addUsers(tempArray);
-							temp.sendMessage(error);
-							userObservers.remove("ERRORNAME");
-						}
-						else {
-							userObservers.put(user, this.writer);
-							System.out.println(this.writer);
-							addedNewUsers = true;
-							
-							PrintWriter out = new PrintWriter(new FileWriter(fileName, true));
-							out.println("***" + user + "###" + pwd);
-							out.close();
-						}
-
-
-					}
 
 					// create a chat room when user requests to chat with others
 					// users are separated by '|' when received
@@ -136,6 +111,90 @@ public class ServerMain {
 						userString += array[1];
 
 						newChat.sendMessage("" + Integer.toString(newChat.getID()) + separator + "CONSOLE" + separator + "This is a new chat between: " + userString);
+					}
+
+					// a user should send in its user name when it is first created
+					else if(array[0].equals("NEWUSER")) {
+						String user = array[1];
+						String pwd = array[2];
+
+						boolean userExists = false;
+						Scanner inFile = new Scanner(new FileReader(fileName));
+						while(inFile.hasNext()) {
+							String line = inFile.nextLine();
+							if (line.toUpperCase().contains(("***" + array[1]).toUpperCase())) {
+								userExists = true;
+							}
+						}
+
+						inFile.close();
+
+						if(userObservers.containsKey(user) || userExists) {
+							userObservers.put("ERRORNAME", this.writer);
+							String error = "USEREXISTS" + separator + "ERRORNAME" + separator +  "ERRORNAME";
+							String[] tempArray = error.split(separator);
+							ChatRoom temp = new ChatRoom();
+							temp.addUsers(tempArray);
+							temp.sendMessage(error);
+							userObservers.remove("ERRORNAME");
+						}
+						else {
+							userObservers.put(user, this.writer);
+							System.out.println(this.writer);
+							addedNewUsers = true;
+
+							PrintWriter out = new PrintWriter(new FileWriter(fileName, true));
+							out.println("***" + user + "###" + pwd);
+							out.close();
+						}
+
+
+					}
+
+					else if(array[0].equals("LOGIN")) {
+
+
+						String user = array[1];
+						String pwd = array[2];
+						if(userObservers.containsKey(user)) {
+							System.out.println("found key?");
+							userObservers.put("ERRORNAME", this.writer);
+							String error = "ALREADYLOGGEDIN" + separator + "ERRORNAME" + separator +  "ERRORNAME";
+							String[] tempArray = error.split(separator);
+							ChatRoom temp = new ChatRoom();
+							temp.addUsers(tempArray);
+							temp.sendMessage(error);
+							userObservers.remove("ERRORNAME");
+
+						}
+						else {
+							boolean userExists = false;
+							Scanner inFile = new Scanner(new FileReader(fileName));
+							while(inFile.hasNext()) {
+								String line = inFile.nextLine();
+								if (line.toUpperCase().contains((("***") + array[1]).toUpperCase()) && line.contains("###" + pwd)) {
+									userExists = true;
+								}
+							}
+
+							if(userExists) {
+								userObservers.put(user, this.writer);
+								System.out.println(this.writer);
+								addedNewUsers = true;
+							} else {
+								userObservers.put("ERRORNAME", this.writer);
+								String error = "WRONGPASS" + separator + "ERRORNAME" + separator +  "ERRORNAME";
+								String[] tempArray = error.split(separator);
+								ChatRoom temp = new ChatRoom();
+								temp.addUsers(tempArray);
+								temp.sendMessage(error);
+								userObservers.remove("ERRORNAME");
+							}
+
+
+
+							inFile.close();
+						}
 					}
 
 					else if(array[0].equals("GETONLINE")) {
@@ -160,52 +219,17 @@ public class ServerMain {
 							temp.sendMessage(names);
 						}
 					}
-					
-					else if(array[0].equals("LOGIN")) {
-						
-						String user = array[1];
-						String pwd = array[2];
-						if(userObservers.containsKey(user)) {
-							userObservers.put("ERRORNAME", this.writer);
-							String error = "USEREXISTS" + separator + "ERRORNAME" + separator +  "ERRORNAME";
-							String[] tempArray = error.split(separator);
-							ChatRoom temp = new ChatRoom();
-							temp.addUsers(tempArray);
-							temp.sendMessage(error);
-							userObservers.remove("ERRORNAME");
-							return;
-						}
-						
-						boolean userExists = false;
-						Scanner inFile = new Scanner(new FileReader(fileName));
-						while(inFile.hasNext()) {
-							String line = inFile.nextLine();
-							if (line.toUpperCase().contains((("***") + array[1]).toUpperCase()) && line.contains("###" + pwd)) {
-								userExists = true;
-							}
-						}
-						
-						if(userExists) {
-							userObservers.put(user, this.writer);
-							System.out.println(this.writer);
-							addedNewUsers = true;
-						} else {
-							userObservers.put("ERRORNAME", this.writer);
-							String error = "WRONGPASS" + separator + "ERRORNAME" + separator +  "ERRORNAME";
-							String[] tempArray = error.split(separator);
-							ChatRoom temp = new ChatRoom();
-							temp.addUsers(tempArray);
-							temp.sendMessage(error);
-							userObservers.remove("ERRORNAME");
-						}
-						
-					
-						
-						inFile.close();
+
+					else if(array[0].equals("LOGOUT")) {
+						System.out.println(array[1]);
+						userObservers.remove(array[1]);
+						addedNewUsers = true;
 					}
 				}
 			} catch (IOException e) {
+
 				e.printStackTrace();
+
 			}
 		}
 
@@ -237,10 +261,14 @@ public class ServerMain {
 		}
 
 		public void addUsers(String[] array) {
-			addObserver(userObservers.get(array[1]));
-			String[] otherUsers = array[2].split(nameSeparator);
-			for(int i = 0; i < otherUsers.length; i++) {
-				addObserver(userObservers.get(otherUsers[i]));
+			if(userObservers.containsKey(array[1])) {
+				addObserver(userObservers.get(array[1]));
+			}
+			if(array.length > 2){
+				String[] otherUsers = array[2].split(nameSeparator);
+				for(int i = 0; i < otherUsers.length; i++) {
+					addObserver(userObservers.get(otherUsers[i]));
+				}
 			}
 		}
 
@@ -253,9 +281,29 @@ public class ServerMain {
 
 
 	public static void main(String[] args) {
+		launch(args);
 		try {
 			new ServerMain().setUpNetworking();
 		} catch (Exception e) { e.printStackTrace(); }
+	}
+
+	@Override
+	public void start(Stage primaryStage) throws Exception {
+		primaryStage.setTitle("Server");
+		VBox rando = new VBox();
+		Scene scene = new Scene(rando, 100, 30);
+		Button close = new Button("Turn Off Server");
+		close.setOnAction(new EventHandler<ActionEvent>() {
+
+			@Override
+			public void handle(ActionEvent arg0) {
+			}
+
+		});
+		rando.getChildren().add(close);
+		primaryStage.setScene(scene);
+		primaryStage.show();
+		
 	}
 
 }

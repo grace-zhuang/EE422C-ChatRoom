@@ -27,6 +27,5 @@ class ClientObserver extends PrintWriter implements Observer {
 		public void update(Observable arg0, Object arg1) {
 			this.println(arg1);
 			this.flush();
-		}
-		
+		}		
 	}
