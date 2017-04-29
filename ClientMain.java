@@ -67,7 +67,9 @@ public class ClientMain extends Application {
 	private String font = "Juice ITC";
 	private String buttonColor = "#b7cedd";
 
-
+	/**
+	 * This function takes care of the setup of the GUI when a chat client is made.
+	 */
 	@Override
 	public void start(Stage primaryStage) throws Exception {
 
@@ -88,10 +90,12 @@ public class ClientMain extends Application {
 
 		Label error = new Label();
 
+		// user inputs IP address of server trying to connect to
 		Button enterIP = new Button("Connect");
 		enterIP.setStyle("-fx-base: " + buttonColor + ";");
 		enterIP.setOnAction(new EventHandler<ActionEvent>() {
 
+			// after IP address entered, set up network and then prompt log in screen
 			@Override
 			public void handle(ActionEvent arg0) {
 				if(!ip.getText().equals("")) {
@@ -105,11 +109,11 @@ public class ClientMain extends Application {
 					}
 				}
 			}
-
 		});
 
 		ip.setOnKeyPressed(new EventHandler<KeyEvent>() {
 
+			// enter key
 			@Override
 			public void handle(KeyEvent keyEvent) {
 				if (keyEvent.getCode() == KeyCode.ENTER){ 
@@ -127,13 +131,16 @@ public class ClientMain extends Application {
 			}
 		});
 
-
 		open.getChildren().addAll(title, ipInstruction, ip, enterIP, error);
 		Scene scene = new Scene(open, 300, 300);
 		primaryStage.setScene(scene);
 		primaryStage.show();
 	}
 
+	/**
+	 * After a valid IP address is entered and a network is established, this function is called to 
+	 * bring up the log in screen for the user
+	 */
 	public void loginScreen() {
 
 		open.getChildren().clear();
@@ -167,9 +174,11 @@ public class ClientMain extends Application {
 				if (!user.equals("") && !pwd.equals("")) {
 					name = user;
 
+					// send the new user info to the server
 					writer.println("NEWUSER" + separator + user + separator + pwd);
 					writer.flush();
 
+					// get a list of current users who are online
 					writer.println("GETONLINE" + separator + name);
 					writer.flush();
 				}	
@@ -189,10 +198,11 @@ public class ClientMain extends Application {
 				if (!user.equals("") && !pwd.equals("")) {
 					name = user;
 
+					// let server know user is logged in
 					writer.println("LOGIN" + separator + user + separator + pwd);
 					writer.flush();
 
-					System.out.println("hello");
+					// called to update everyon else's chat screens to reflect the new user who just logged in
 					writer.println("GETONLINE" + separator + name);
 					writer.flush();
 					System.out.println("leave");
@@ -202,25 +212,22 @@ public class ClientMain extends Application {
 		});
 
 		open.getChildren().addAll(title, instruction,  username , instruction2, password, createAcc, login);
-
-
-
 		Scene scene = new Scene(open, 300, 300);
 		home.setScene(scene);
-
-		
-
 		home.show();
 	}
 
+	/**
+	 * This function sets up the networking to the specified IP address and port and starts the thread.
+	 * @param IP is a String that holds the IP address entered by the user
+	 * @throws Exception
+	 */
 	private void setUpNetworking(String IP) throws Exception {
-		System.out.println("Setting up networking");
-
-		//		@SuppressWarnings("resource") 
 
 		this.sock = new Socket(IP, 4242);
 		InputStreamReader streamReader = new InputStreamReader(sock.getInputStream());
 		reader = new BufferedReader(streamReader);
+		
 		try
 		{
 			writer = new PrintWriter(sock.getOutputStream());
@@ -229,11 +236,15 @@ public class ClientMain extends Application {
 		{
 			e.printStackTrace();
 		}
-		System.out.println("networking established"); 
 		Thread readerThread = new Thread(new IncomingReader()); 
 		readerThread.start();
 	}
 
+	/**
+	 * This function is called when the user selects "Make Account" in the login screen. This function will
+	 * determines whether the login username entered by a user already exists in the server's database.
+	 * @param message is unused
+	 */
 	public void userExists(String[] message) { 
 
 
@@ -253,6 +264,11 @@ public class ClientMain extends Application {
 
 	}
 
+	/**
+	 * This function is called when the user selects "Login" at the login screen. The function will determine whether or not the 
+	 * user is already in the list of userObservers logged in at the moment.
+	 * @param message is not used
+	 */
 	public void alreadyLogged(String[] message) {
 
 		for(ListIterator<Node> iterator = open.getChildren().listIterator(); iterator.hasNext();) {
@@ -270,8 +286,12 @@ public class ClientMain extends Application {
 
 	}
 
+	/**
+	 * After user selects the "login" button in the login screen, this function checks to see if the username given matches
+	 * the password saved in the text file database.
+	 * @param message
+	 */
 	public void wrongPass(String[] message) { 
-
 
 		for(ListIterator<Node> iterator = open.getChildren().listIterator(); iterator.hasNext();) {
 			Node currentNode = iterator.next();
@@ -289,6 +309,11 @@ public class ClientMain extends Application {
 
 	}
 
+	/**
+	 * After user successfully logs in, this function sets up the new user interface for the "home screen". "Home screen" includes
+	 * options to chat with other users, customize colors, etc.
+	 * @param available
+	 */
 	public void loggedIn(String[] available) {
 
 		//close old stage
@@ -318,6 +343,7 @@ public class ClientMain extends Application {
 
 		chat.getChildren().addAll(welcome, space1, people);
 
+		// CheckBox of all users currently online (available is the array of online users)
 		CheckBox[] online = new CheckBox[available.length-1];
 		int j = 0;
 		for (int i = 0; i < available.length; i++) {
@@ -328,9 +354,9 @@ public class ClientMain extends Application {
 			}
 		}
 
+		// start chat with other online user(s)
 		Button done = new Button("Start Chat");
 		done.setStyle("-fx-base: " + buttonColor + ";");
-
 		done.setOnAction(new EventHandler<ActionEvent>() {
 
 			@Override
@@ -354,6 +380,7 @@ public class ClientMain extends Application {
 
 		Label myColor = new Label("Select your color:");
 
+		// give users the option of customizing chat colors
 		ColorPicker colorPickerMine = new ColorPicker(Color.BLACK);
 		colorPickerMine.setOnAction(new EventHandler() {
 			@Override
@@ -372,9 +399,9 @@ public class ClientMain extends Application {
 			}
 		});
 
+		// log out of the system
 		Button logOut = new Button("Log Out");
 		logOut.setStyle("-fx-base: " + buttonColor + ";");
-
 		logOut.setOnAction(new EventHandler<ActionEvent>() {
 
 			@Override
@@ -412,14 +439,12 @@ public class ClientMain extends Application {
 		Scene realScene = new Scene(chat, 300, 400);
 		home.setScene(realScene);
 		
+		// set up so that if the user closes the home window, it effectively logs them out of the system
 		home.setOnCloseRequest(new EventHandler<WindowEvent>() {
 
 			@Override
 			public void handle(WindowEvent event) {
-
-
-
-
+				
 				for (ChatWindow chats : chatWindows.values()) {
 					chats.chat.close();
 				}
@@ -451,13 +476,14 @@ public class ClientMain extends Application {
 		home.show();
 	}
 
+	// closes the socket
 	public void exit() {
 		System.exit(0);
 	}
 
 	/**
-	 * Creates new ChatWindow
-	 * @param message
+	 * Creates new ChatWindow object.
+	 * @param message a String array, each element of which is a segment from the message received from the server
 	 */
 	public void startChat(String[] message) {
 		int ID = Integer.parseInt(message[0]);
@@ -467,6 +493,8 @@ public class ClientMain extends Application {
 		newChat.updateChat(message);
 	}
 
+	// The ChatWindow class represents the user interface through which a user chats with another user. Included are
+	// JavaFX elements, functions to send and receive messages, etc.
 	class ChatWindow extends Application {
 
 		private int ID;
@@ -476,8 +504,6 @@ public class ClientMain extends Application {
 		private int messageNo = 0;
 
 		public ChatWindow(int num) {
-
-
 
 			ID = num;
 			this.chat = new Stage();
@@ -489,11 +515,10 @@ public class ClientMain extends Application {
 			sPane.setVbarPolicy(ScrollBarPolicy.ALWAYS);
 			sPane.setHbarPolicy(ScrollBarPolicy.NEVER);
 
-
-
-
 			TextField text = new TextField();
 			text.setPromptText("Enter message");
+			
+			// send a message to another user
 			Button send = new Button("Send");
 			send.setStyle("-fx-base: " + buttonColor + ";");
 			send.setOnAction(new EventHandler<ActionEvent>() {
@@ -535,7 +560,6 @@ public class ClientMain extends Application {
 			screen.add(text,0,1);
 			screen.add(send, 1, 1);
 
-
 			sPane.setContent(convo);
 			box.getChildren().addAll(screen);
 			Scene scene = new Scene(box, 300, 300);
@@ -544,6 +568,10 @@ public class ClientMain extends Application {
 			chat.show();
 		}
 
+		/**
+		 * This function sets the title of a chat window to be the name of the person you're chatting with.
+		 * @param message a String array, each element of which is a segment from the message received from the server
+		 */
 		public void setTitle(String[] message) {
 			String sentMessage = message[2];
 			sentMessage = sentMessage.substring(28, sentMessage.length());
@@ -555,96 +583,107 @@ public class ClientMain extends Application {
 			//nothing
 		}
 
+		
 		public int getID() {
 			return ID;
 		}
 
+		/**
+		 * This function updates the chat window on the user's side to display changes received from the server (when the
+		 * user receives a message or sends a message to other users.
+		 * @param message a String array, each element of which is a segment from the message received from the server
+		 */
 		public void updateChat(String[] message) {
+			
+			// text1 and text2 to allow for boldface username in chat
 			TextFlow text = new TextFlow();
 			Text text1 = new Text(message[1] + ": " );
 			text1.setStyle("-fx-font-weight: bold");
 			Text text2 = new Text(message[2]);
 			text.getChildren().addAll(text1,text2);
 
+			// start message of each chat is always in black
 			if (message[1].equals("CONSOLE")) {
 				text1.setFill(Color.BLACK);
 				text2.setFill(Color.BLACK);
 			}
 
-			// if you are the user that send the message - set stuff to differentiate here
+			// if you are the user that sent the message, text should appear in color selected by the user
 			else if(message[1].equals(name)) {
-				//				text.setAlignment(Pos.CENTER_RIGHT);
-				//				text.setBackground(new Background(new BackgroundFill(Color.BLUE, CornerRadii.EMPTY, Insets.EMPTY)));
-				//				text.setTextFill(Color.WHITE);
-
 				text1.setFill(mine);
 				text2.setFill(mine);
 			}
 
+			// else, message is from someone else, text should appear in the color chosen
 			else {
 				text1.setFill(theirs);
 				text2.setFill(theirs);
 			}
+			
 			text.setMaxWidth(sPane.getWidth());
 			text.setBorder(null);
 			convo.add(text, 1, messageNo);
 			messageNo++;
-
-
+			
 			sPane.setVvalue(1.0);
-
-
 		}
 
+		/**
+		 * This function sends the message the user wants sent to the server, along with other important information.
+		 * @param message is a String taken from the user's input on what they want to send
+		 */
 		public void sendMessage(String message) {
 			writer.println(ID + separator + name + separator + message);
 			writer.flush();
 		}
-
-
-
-
 	}
 
+	// this class's only job is to poll the server to see if there are any updates made to the Observable
 	class IncomingReader implements Runnable {
 
 		@Override
 		public void run() {
+			
 			String incoming;
+			
 			try {
 				while ((incoming = reader.readLine()) != null) {
-
+					
+					// message received from the server
 					String[] message = incoming.split(separator);
 
-
+					// instruction from server is to update
 					if (message[0].equals("GETONLINE")) {
-
 						Platform.runLater(new Runnable() {
 							@Override
 							public void run() { 
 								loggedIn(message[2].split(nameSeparator));
 							}
 						});
-
 					}
 
+					// server indicates another user wants to either start messaging or send a message to an existing chat
 					else if (isNumeric(message[0])) {
 						Platform.runLater(new Runnable() {
 							@Override
 							public void run() { 
 
 								int ID = Integer.parseInt(message[0]);
+								
+								// chat window ID is already contained within this user's list of open chat windows
 								if (chatWindows.containsKey(ID)) {
 									chatWindows.get(ID).updateChat(message);
 								}
 
+								// new chat being initiated
 								else {
 									startChat(message);
 								}	
 							}
 						});
-
 					}
+					
+					// server telling cient username is taken, already exists
 					else if (message[0].equals("USEREXISTS")) {
 						Platform.runLater(new Runnable() {
 							@Override
@@ -653,6 +692,8 @@ public class ClientMain extends Application {
 							}
 						});
 					}
+					
+					// server telling client user is already logged in
 					else if(message[0].equals("ALREADYLOGGEDIN")) {
 						Platform.runLater(new Runnable() {
 							@Override
@@ -662,6 +703,7 @@ public class ClientMain extends Application {
 						});
 					}
 
+					// server telling client the entered password is incorrect
 					else if (message[0].equals("WRONGPASS")) {
 						Platform.runLater(new Runnable() {
 							@Override
@@ -670,8 +712,6 @@ public class ClientMain extends Application {
 							}
 						});
 					}
-
-
 				}
 			} catch (IOException ex) { 
 				if(ex instanceof SocketException) {}
@@ -679,6 +719,11 @@ public class ClientMain extends Application {
 		}
 	}
 
+	/**
+	 * Determines if an input is a number
+	 * @param str is a String input
+	 * @return boolean true if input is numeric, false if not
+	 */
 	private static boolean isNumeric(String str) {  
 		try {  
 			double d = Double.parseDouble(str);  
