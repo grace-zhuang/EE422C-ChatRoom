@@ -100,19 +100,53 @@ public class ServerMain {
 					// create a chat room when user requests to chat with others
 					// users are separated by nameSeparator when received
 					else if(array[0].equals("NEWCHAT")) {
-						ChatRoom newChat = new ChatRoom();
-						openChats.add(newChat);
-						newChat.setID(openChats.indexOf(newChat));
-						newChat.addUsers(array);
-
-						String userString = "";
 						String[] users = array[2].split(nameSeparator);
-						for(int i = 0; i < users.length; i++) {
-							userString += users[i] + ", ";
-						}
-						userString += array[1];
 
-						newChat.sendMessage("" + Integer.toString(newChat.getID()) + separator + "CONSOLE" + separator + "This is a new chat between: " + userString);
+						// check to see if chat with users already exists
+						String[] names = new String[users.length + 1];
+						names[0] = array[1];
+						for(int i = 0; i< users.length; i++) {
+							names[i+1] = users[i];
+						}
+						
+						boolean exist = false;
+						boolean flag = false;
+						int ID = -1;
+						for(ChatRoom room: openChats) {
+							for(String name: names) {
+								if(!room.users.contains(name)) {
+									flag = true;
+									break;
+								}
+							}
+							if (!flag) {
+								exist = true;
+								ID = room.getID();
+								break;
+							}
+						}
+
+
+
+
+
+						if(!exist) {
+							ChatRoom newChat = new ChatRoom();
+							openChats.add(newChat);
+							newChat.setID(openChats.indexOf(newChat));
+							newChat.addUsers(array);
+
+							String userString = "";
+							for(int i = 0; i < users.length; i++) {
+								userString += users[i] + ", ";
+							}
+							userString += array[1];
+
+							newChat.sendMessage("" + Integer.toString(newChat.getID()) + separator + "CONSOLE" + separator + "This is a new chat between: " + userString);
+						} else {
+							ChatRoom chat = openChats.get(ID);
+							chat.sendMessage("" + Integer.toString(chat.getID()) + separator + "CONSOLE" + separator + "Chat refresh requested.");
+						}
 					}
 
 					// a user should send in its user name when it is first created
@@ -144,7 +178,6 @@ public class ServerMain {
 						}
 						else {
 							userObservers.put(user, this.writer);
-							System.out.println(this.writer);
 							addedNewUsers = true;
 
 							PrintWriter out = new PrintWriter(new FileWriter(fileName, true));
@@ -162,7 +195,6 @@ public class ServerMain {
 						String user = array[1];
 						String pwd = array[2];
 						if(userObservers.containsKey(user)) {
-							System.out.println("found key?");
 							userObservers.put("ERRORNAME", this.writer);
 							String error = "ALREADYLOGGEDIN" + separator + "ERRORNAME" + separator +  "ERRORNAME";
 							String[] tempArray = error.split(separator);
@@ -229,7 +261,6 @@ public class ServerMain {
 
 					// LOGOUT removes user from our HashMap
 					else if(array[0].equals("LOGOUT")) {
-						System.out.println(array[1]);
 						userObservers.remove(array[1]);
 						addedNewUsers = true;
 					}
@@ -263,6 +294,8 @@ public class ServerMain {
 	 * framework built into Java
 	 */
 	class ChatRoom extends Observable {
+
+		public List<String> users = new ArrayList<String>();
 		private int ID;
 
 		public void setID(int ID) {
@@ -281,11 +314,13 @@ public class ServerMain {
 		public void addUsers(String[] array) {
 			if(userObservers.containsKey(array[1])) {
 				addObserver(userObservers.get(array[1]));
+				users.add(array[1]);
 			}
 			if(array.length > 2){
 				String[] otherUsers = array[2].split(nameSeparator);
 				for(int i = 0; i < otherUsers.length; i++) {
 					addObserver(userObservers.get(otherUsers[i]));
+					users.add(otherUsers[i]);
 				}
 			}
 		}
