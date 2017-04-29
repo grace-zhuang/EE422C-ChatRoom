@@ -46,6 +46,10 @@ public class ServerMain {
 		} 
 	}
 
+	/**
+	 * Set up network sockets for server and create threads for each unique client
+	 * @throws Exception
+	 */
 	public void setUpNetworking() throws Exception {
 		this.serverSock = new ServerSocket(4242); 
 		while (true) { 
@@ -58,6 +62,11 @@ public class ServerMain {
 	}
 
 
+	/**
+	 * ClientHandler is a Runnable that constantly checks for "messages" from the clients
+	 * which then get processed via a standard protocol.
+	 *
+	 */
 	class ClientHandler implements Runnable {
 		private BufferedReader reader;
 		private ClientObserver writer;
@@ -89,7 +98,7 @@ public class ServerMain {
 
 
 					// create a chat room when user requests to chat with others
-					// users are separated by '|' when received
+					// users are separated by nameSeparator when received
 					else if(array[0].equals("NEWCHAT")) {
 						ChatRoom newChat = new ChatRoom();
 						openChats.add(newChat);
@@ -111,6 +120,7 @@ public class ServerMain {
 						String user = array[1];
 						String pwd = array[2];
 
+						// check to see if user has already been created in text file
 						boolean userExists = false;
 						Scanner inFile = new Scanner(new FileReader(fileName));
 						while(inFile.hasNext()) {
@@ -122,6 +132,7 @@ public class ServerMain {
 
 						inFile.close();
 
+						// if user is online OR user already exists within text file
 						if(userObservers.containsKey(user) || userExists) {
 							userObservers.put("ERRORNAME", this.writer);
 							String error = "USEREXISTS" + separator + "ERRORNAME" + separator +  "ERRORNAME";
@@ -144,6 +155,7 @@ public class ServerMain {
 
 					}
 
+					// attempt to try to log into chat server
 					else if(array[0].equals("LOGIN")) {
 
 
@@ -190,6 +202,8 @@ public class ServerMain {
 						}
 					}
 
+					// retrieve all online people if there has been a change in 
+					// # of clients and print out change to every client
 					else if(array[0].equals("GETONLINE")) {
 
 						if(addedNewUsers) {
@@ -213,6 +227,7 @@ public class ServerMain {
 						}
 					}
 
+					// LOGOUT removes user from our HashMap
 					else if(array[0].equals("LOGOUT")) {
 						System.out.println(array[1]);
 						userObservers.remove(array[1]);
@@ -242,6 +257,11 @@ public class ServerMain {
 		}
 	}
 
+	/**
+	 * ChatRoom acts as a holder of information and implements the Observable
+	 * abstract class which allows us to utilize the Observer/Observable
+	 * framework built into Java
+	 */
 	class ChatRoom extends Observable {
 		private int ID;
 
@@ -253,6 +273,11 @@ public class ServerMain {
 			return ID;
 		}
 
+		/**
+		 * Adds users to the observers list
+		 * @param array holds a username within array[1] and a list of user
+		 * 				in array[2] which is separated by nameSeparator
+		 */
 		public void addUsers(String[] array) {
 			if(userObservers.containsKey(array[1])) {
 				addObserver(userObservers.get(array[1]));
@@ -265,6 +290,10 @@ public class ServerMain {
 			}
 		}
 
+		/**
+		 * uses setChanged and pushes message to all Observers
+		 * @param message
+		 */
 		public void sendMessage(String message) {
 			setChanged();
 			notifyObservers(message);
