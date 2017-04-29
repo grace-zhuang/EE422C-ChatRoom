@@ -55,6 +55,7 @@ public class ServerMain extends Application {
 	public void setUpNetworking() throws Exception {
 		@SuppressWarnings("resource") 
 		ServerSocket serverSock = new ServerSocket(4242); 
+		launch();
 		while (true) { 
 			Socket clientSocket = serverSock.accept();
 			System.out.println("Received connection " + clientSocket);
@@ -281,7 +282,6 @@ public class ServerMain extends Application {
 
 
 	public static void main(String[] args) {
-		launch(args);
 		try {
 			new ServerMain().setUpNetworking();
 		} catch (Exception e) { e.printStackTrace(); }
@@ -297,6 +297,7 @@ public class ServerMain extends Application {
 
 			@Override
 			public void handle(ActionEvent arg0) {
+				System.out.println("hi");
 			}
 
 		});
