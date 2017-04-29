@@ -6,7 +6,7 @@
  * Grace Zhuang
  * gpz68
  * 16215
- * Slip days used: <0>
+ * Slip days used: <1>
  * Spring 2017
  */
 
@@ -18,6 +18,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.ListIterator;
 
@@ -48,7 +49,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
 
-public class ChatClient extends Application {
+public class ClientMain extends Application {
 
 	private String name;
 	private BufferedReader reader;
@@ -62,15 +63,53 @@ public class ChatClient extends Application {
 
 	@Override
 	public void start(Stage primaryStage) throws Exception {
-		setUpNetworking();
+		
 		home = primaryStage;
-
-		primaryStage.setTitle("Chat Room");
 		open = new VBox();
-
+		primaryStage.setTitle("Chat Room");
+		
 		Label title = new Label("Welcome to Chat Room!");
 		title.setFont(Font.font("Bradley Hand ITC", 30));
+		
+		Label ipInstruction = new Label("Enter IP Address:");
+		TextField ip = new TextField();
+		ip.setPromptText("IP Address");
+		
+		Label error = new Label();
+		
+		Button enterIP = new Button("Connect");
+		enterIP.setOnAction(new EventHandler<ActionEvent>() {
 
+			@Override
+			public void handle(ActionEvent arg0) {
+				if(!ip.getText().equals("")) {
+					try {
+						setUpNetworking(ip.getText());
+						loginScreen();
+					} catch (UnknownHostException e) {
+						error.setText("Invalid IP, reenter.");
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+				}
+			}
+
+		});
+		
+		open.getChildren().addAll(title, ipInstruction, ip, enterIP, error);
+		Scene scene = new Scene(open, 300, 300);
+		primaryStage.setScene(scene);
+		primaryStage.show();
+	}
+	public void loginScreen() {
+		
+		open.getChildren().clear();
+		
+		open = new VBox();
+		
+		Label title = new Label("Welcome to Chat Room!");
+		title.setFont(Font.font("Bradley Hand ITC", 30));
+		
 		Label instruction = new Label("Please enter a username:");
 		TextField username = new TextField();
 		username.setPromptText("Username");
@@ -121,19 +160,21 @@ public class ChatClient extends Application {
 
 		});
 
-		open.getChildren().addAll(title, instruction, username , password, createAcc, login);
+		open.getChildren().addAll(title, instruction,  username , instruction2, password, createAcc, login);
 
+		
+		
 		Scene scene = new Scene(open, 300, 300);
-		primaryStage.setScene(scene);
-		primaryStage.show();
+		home.setScene(scene);
+		home.show();
 	}
 
-	private void setUpNetworking() throws Exception {
+	private void setUpNetworking(String IP) throws Exception {
 		System.out.println("Setting up networking");
 
 		@SuppressWarnings("resource") 
 
-		Socket sock = new Socket("127.0.0.1", 4242);
+		Socket sock = new Socket(IP, 4242);
 		InputStreamReader streamReader = new InputStreamReader(sock.getInputStream());
 		reader = new BufferedReader(streamReader);
 		try
@@ -221,7 +262,6 @@ public class ChatClient extends Application {
 			public void handle(ActionEvent arg0) {
 
 				String names = "";
-				System.out.println(online.length);
 				for(int i = 0; i < online.length; i++) {
 					if (online[i].isSelected())
 						names += online[i].getText() + nameSeparator;
@@ -338,7 +378,6 @@ public class ChatClient extends Application {
 		public void setTitle(String[] message) {
 			String sentMessage = message[2];
 			sentMessage = sentMessage.substring(28, sentMessage.length());
-			System.out.println(sentMessage);
 			chat.setTitle(sentMessage);
 		}
 

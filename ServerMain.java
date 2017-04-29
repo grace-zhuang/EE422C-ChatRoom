@@ -6,7 +6,7 @@
  * Grace Zhuang
  * gpz68
  * 16215
- * Slip days used: <0>
+ * Slip days used: <1>
  * Spring 2017
  */
 
@@ -17,7 +17,7 @@ import java.net.*;
 import java.util.*;
 
 
-public class ChatServer {
+public class ServerMain {
 	private static List<ChatRoom> openChats;
 	private static Map<String, ClientObserver> userObservers;
 	private static final String separator = Character.toString((char) 31);
@@ -27,7 +27,7 @@ public class ChatServer {
 
 
 
-	public ChatServer() throws FileNotFoundException, IOException {
+	public ServerMain() throws FileNotFoundException, IOException {
 		openChats = new ArrayList<ChatRoom>();
 		userObservers = new HashMap<String, ClientObserver>();
 
@@ -254,7 +254,7 @@ public class ChatServer {
 
 	public static void main(String[] args) {
 		try {
-			new ChatServer().setUpNetworking();
+			new ServerMain().setUpNetworking();
 		} catch (Exception e) { e.printStackTrace(); }
 	}
 
